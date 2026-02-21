@@ -1,0 +1,139 @@
+{
+  "_comment": "Default response library for DCC RPC Simulator",
+  "_note": "The simulator has built-in handlers for all methods, so this file is optional",
+  "_usage": "Can be extended for custom scenarios or response overrides",
+  
+  "default_responses": {
+    "echo": {
+      "status": "ok",
+      "echo": {}
+    },
+    "command_station_start": {
+      "status": "ok",
+      "message": "Command station started",
+      "loop": 0
+    },
+    "command_station_stop": {
+      "status": "ok",
+      "message": "Command station stopped"
+    },
+    "decoder_start": {
+      "status": "ok",
+      "message": "Decoder started"
+    },
+    "decoder_stop": {
+      "status": "ok",
+      "message": "Decoder stopped"
+    },
+    "command_station_params": {
+      "status": "ok",
+      "message": "Command station parameters updated"
+    },
+    "command_station_get_params": {
+      "status": "ok",
+      "parameters": {
+        "track_voltage": 15000,
+        "preamble_bits": 17,
+        "bit1_duration": 58,
+        "bit0_duration": 100,
+        "bidi_enable": false,
+        "bidi_dac": 2048,
+        "trigger_first_bit": false,
+        "zerobit_override_mask": "0x0000000000000000",
+        "zerobit_deltaP": 0,
+        "zerobit_deltaN": 0
+      }
+    },
+    "command_station_packet_override": {
+      "status": "ok",
+      "message": "Packet override parameters updated"
+    },
+    "command_station_packet_reset_override": {
+      "status": "ok",
+      "message": "Packet override parameters reset to 0"
+    },
+    "command_station_packet_get_override": {
+      "status": "ok",
+      "zerobit_override_mask": "0x0000000000000000",
+      "zerobit_override_mask_decimal": 0,
+      "zerobit_deltaP": 0,
+      "zerobit_deltaN": 0
+    },
+    "parameters_save": {
+      "status": "ok",
+      "message": "Parameters saved to flash"
+    },
+    "parameters_restore": {
+      "status": "ok",
+      "message": "Parameters restored from flash"
+    },
+    "parameters_factory_reset": {
+      "status": "ok",
+      "message": "Factory reset completed - all parameters restored to defaults"
+    },
+    "get_voltage_feedback_mv": {
+      "status": "ok",
+      "voltage_mv": 15000
+    },
+    "get_current_feedback_ma": {
+      "status": "ok",
+      "current_ma": 500
+    },
+    "system_reboot": {
+      "status": "ok",
+      "message": "System rebooting..."
+    },
+    "command_station_load_packet": {
+      "status": "ok",
+      "message": "Packet loaded successfully",
+      "length": 3,
+      "replace": false
+    }
+  },
+  
+  "error_responses": {
+    "invalid_json": {
+      "status": "error",
+      "message": "Invalid JSON"
+    },
+    "malformed_request": {
+      "status": "error",
+      "message": "Malformed request"
+    },
+    "unknown_method": {
+      "status": "error",
+      "message": "Unknown method"
+    },
+    "params_not_object": {
+      "status": "error",
+      "message": "Params must be an object"
+    }
+  },
+  
+  "scenarios": {
+    "_comment": "Pre-defined test scenarios can be added here",
+    "_example": "Each scenario is a sequence of request/response pairs",
+    
+    "packet_acceptance_test": {
+      "description": "Simulates a typical packet acceptance test run",
+      "sequence": [
+        {
+          "request": {"method": "command_station_start", "params": {}},
+          "response": {"status": "ok", "message": "Command station started", "loop": 0}
+        },
+        {
+          "request": {"method": "get_voltage_feedback_mv", "params": {}},
+          "response": {"status": "ok", "voltage_mv": 15250}
+        },
+        {
+          "request": {"method": "get_current_feedback_ma", "params": {}},
+          "response": {"status": "ok", "current_ma": 520}
+        },
+        {
+          "request": {"method": "command_station_stop", "params": {}},
+          "response": {"status": "ok", "message": "Command station stopped"}
+        }
+      ]
+    }
+  }
+}
