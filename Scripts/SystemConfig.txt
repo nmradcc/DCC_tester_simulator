@@ -3,7 +3,7 @@
 # Global configuration parameters shared across all test runners
 
 # Serial port for DCC Tester device
-serial_port=COM19
+serial_port=COM9
 
 # In-circuit motor flag (true/false)
 # Set to true if testing with motor connected
