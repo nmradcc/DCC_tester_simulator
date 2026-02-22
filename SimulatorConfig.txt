@@ -12,16 +12,18 @@ timeout=2
 
 # Response mode:
 #   "default" - Use built-in response library
-#   "replay" - Learn from verbose log file
+#   "replay" - Replay parsed request/response pairs from LogParser output
 #   "scenario" - Load specific test scenario
 response_mode=scenario
 
-# Path to verbose log file (for replay mode)
-# Set to None or leave empty for default mode
+# Path to replay pairs JSON file (for replay mode)
+# Use LogParser output (e.g., Test1-4_pairs.json)
+# Set to None when not using replay mode.
 log_file=None
 
 # Path to scenario JSON file (for scenario mode)
-scenario_file=test1_output_scenario.json
+# Use LogParser output (e.g., Test1-4_scenario.json)
+scenario_file=Test1-4_scenario.json
 
 # Enable logging of all RPC traffic
 enable_logging=true
