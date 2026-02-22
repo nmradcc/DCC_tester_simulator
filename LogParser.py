@@ -35,6 +35,15 @@ class LogParser:
         self.rpc_pairs = []
         self.stats = defaultdict(int)
         self.errors = []
+
+    def _extract_timestamp_ms(self, line: str) -> int:
+        """Extract [HH:MM:SS.mmm] timestamp and return milliseconds since midnight."""
+        match = re.search(r"\[(\d{2}):(\d{2}):(\d{2})\.(\d{3})\]", line)
+        if not match:
+            return -1
+
+        hours, minutes, seconds, millis = (int(part) for part in match.groups())
+        return ((hours * 60 + minutes) * 60 + seconds) * 1000 + millis
     
     def parse(self):
         """Parse the log file and extract RPC request/response pairs."""
@@ -51,6 +60,7 @@ class LogParser:
         
         # State machine for parsing
         pending_request = None
+        previous_request_timestamp_ms = None
         line_num = 0
         
         for line in lines:
@@ -59,12 +69,30 @@ class LogParser:
             
             # Look for outgoing request (→)
             if "→ {" in line:
+                request_timestamp_ms = self._extract_timestamp_ms(line)
                 json_start = line.find("→ {")
                 json_str = line[json_start + 2:].strip()
                 
                 try:
                     request = json.loads(json_str)
-                    pending_request = (request, line_num)
+                    if previous_request_timestamp_ms is not None and request_timestamp_ms >= 0:
+                        delta_from_previous_request_ms = max(
+                            0,
+                            request_timestamp_ms - previous_request_timestamp_ms
+                        )
+                    else:
+                        delta_from_previous_request_ms = 0
+
+                    pending_request = {
+                        "request": request,
+                        "line_num": line_num,
+                        "request_timestamp_ms": request_timestamp_ms,
+                        "delta_from_previous_request_ms": delta_from_previous_request_ms,
+                    }
+
+                    if request_timestamp_ms >= 0:
+                        previous_request_timestamp_ms = request_timestamp_ms
+
                     self.stats["requests"] += 1
                 except json.JSONDecodeError as e:
                     self.errors.append(f"Line {line_num}: Invalid request JSON: {e}")
@@ -72,6 +100,7 @@ class LogParser:
             
             # Look for incoming response (←)
             elif "← {" in line:
+                response_timestamp_ms = self._extract_timestamp_ms(line)
                 json_start = line.find("← {")
                 json_str = line[json_start + 2:].strip()
                 
@@ -81,12 +110,24 @@ class LogParser:
                     
                     # Match with pending request
                     if pending_request:
-                        request, req_line = pending_request
+                        request = pending_request["request"]
+                        req_line = pending_request["line_num"]
+                        req_timestamp_ms = pending_request["request_timestamp_ms"]
+
+                        if req_timestamp_ms >= 0 and response_timestamp_ms >= 0:
+                            request_to_response_ms = max(0, response_timestamp_ms - req_timestamp_ms)
+                        else:
+                            request_to_response_ms = None
+
                         self.rpc_pairs.append({
                             "request": request,
                             "response": response,
                             "line_num": req_line,
-                            "method": request.get("method", "unknown")
+                            "method": request.get("method", "unknown"),
+                            "request_timestamp_ms": req_timestamp_ms,
+                            "response_timestamp_ms": response_timestamp_ms,
+                            "delta_from_previous_request_ms": pending_request["delta_from_previous_request_ms"],
+                            "request_to_response_ms": request_to_response_ms,
                         })
                         
                         # Update method stats
@@ -164,7 +205,9 @@ class LogParser:
         for pair in self.rpc_pairs:
             scenario["sequence"].append({
                 "request": pair["request"],
-                "response": pair["response"]
+                "response": pair["response"],
+                "delay_before_request_ms": pair.get("delta_from_previous_request_ms", 0),
+                "request_to_response_ms": pair.get("request_to_response_ms")
             })
         
         with open(output_file, "w", encoding="utf-8") as f:

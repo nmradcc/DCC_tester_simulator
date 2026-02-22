@@ -165,10 +165,13 @@ Parses verbose log files to learn actual request/response patterns.
 
 ```ini
 response_mode=replay
-log_file=c:\tmp\logs\timing_test_20260220_143022.log
+log_file=timing_test_20260220_143022_pairs.json
 ```
 
 Best for: Reproducing specific test runs, debugging edge cases
+
+When `simulate_timing=true` and replay pairs include `request_to_response_ms`,
+the simulator delays each replayed response by recorded timing from the original log.
 
 #### Scenario Mode (Pre-defined Sequences)
 Uses pre-defined test scenarios from JSON files.
@@ -179,6 +182,9 @@ scenario_file=scenarios\timing_margin_pass.json
 ```
 
 Best for: Repeatable test cases, regression testing
+
+When `simulate_timing=true` and a scenario step includes `request_to_response_ms`,
+the simulator delays each response by that recorded value to replay original log timing.
 
 ## Log Parser Utility
 
@@ -205,6 +211,7 @@ python LogParser.py test.log my_output
    response_mode=scenario
    scenario_file=test_scenario.json
    ```
+4. For timestamp-accurate replay, keep `simulate_timing=true` so per-step `request_to_response_ms` values are applied.
 
 ## Advanced Features
 

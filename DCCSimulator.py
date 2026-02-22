@@ -29,7 +29,7 @@ import time
 import random
 import tempfile
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 # Default configuration values
 DEFAULT_CONFIG = {
@@ -104,6 +104,10 @@ class DCCSimulator:
         self.config = config
         self.state = CommandStationState()
         self.response_library = {}
+        self.scenario_sequence: List[Dict[str, Any]] = []
+        self.scenario_index = 0
+        self.replay_pairs: List[Dict[str, Any]] = []
+        self.replay_index = 0
         self.log_file = None
         self.instance_lock_fd = None
         self.instance_lock_path = None
@@ -113,6 +117,8 @@ class DCCSimulator:
         
         # Load response library
         self._load_response_library()
+        self._load_scenario_if_needed()
+        self._load_replay_if_needed()
         
         # Setup logging
         if config["enable_logging"]:
@@ -213,6 +219,77 @@ class DCCSimulator:
         else:
             self._log("WARNING: ResponseLibrary.json not found, using minimal defaults")
             self.response_library = {}
+
+    def _load_scenario_if_needed(self):
+        """Load scenario file when running in scenario mode."""
+        if self.config.get("response_mode") != "scenario":
+            return
+
+        scenario_file = self.config.get("scenario_file")
+        if not scenario_file or str(scenario_file).strip().lower() == "none":
+            self._log("WARNING: Scenario mode enabled but no scenario_file configured")
+            return
+
+        scenario_path = str(scenario_file)
+        if not os.path.isabs(scenario_path):
+            scenario_path = os.path.join(os.path.dirname(__file__), scenario_path)
+
+        if not os.path.exists(scenario_path):
+            self._log(f"WARNING: Scenario file not found: {scenario_path}")
+            return
+
+        try:
+            with open(scenario_path, "r", encoding="utf-8") as f:
+                scenario_data = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            self._log(f"WARNING: Failed to load scenario file {scenario_path}: {e}")
+            return
+
+        sequence = scenario_data.get("sequence", [])
+        if not isinstance(sequence, list):
+            self._log(f"WARNING: Scenario file has invalid sequence format: {scenario_path}")
+            return
+
+        self.scenario_sequence = sequence
+        self.scenario_index = 0
+        self._log(f"Loaded scenario with {len(self.scenario_sequence)} steps from {scenario_path}")
+
+    def _load_replay_if_needed(self):
+        """Load replay pairs file when running in replay mode."""
+        if self.config.get("response_mode") != "replay":
+            return
+
+        replay_file = self.config.get("log_file")
+        if not replay_file or str(replay_file).strip().lower() == "none":
+            self._log("WARNING: Replay mode enabled but no log_file configured")
+            return
+
+        replay_path = str(replay_file)
+        if not os.path.isabs(replay_path):
+            replay_path = os.path.join(os.path.dirname(__file__), replay_path)
+
+        if not os.path.exists(replay_path):
+            self._log(f"WARNING: Replay file not found: {replay_path}")
+            return
+
+        try:
+            with open(replay_path, "r", encoding="utf-8") as f:
+                replay_data = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            self._log(f"WARNING: Failed to load replay file {replay_path}: {e}")
+            return
+
+        pairs = replay_data.get("rpc_pairs")
+        if not isinstance(pairs, list):
+            self._log(
+                "WARNING: Replay file missing rpc_pairs list. "
+                "Use LogParser output (*_pairs.json)."
+            )
+            return
+
+        self.replay_pairs = pairs
+        self.replay_index = 0
+        self._log(f"Loaded replay with {len(self.replay_pairs)} steps from {replay_path}")
     
     def _setup_logging(self):
         """Setup log file for recording RPC traffic."""
@@ -648,8 +725,8 @@ class DCCSimulator:
             "length": len(packet)
         }
     
-    def process_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """Process an RPC request and generate response."""
+    def _process_default_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Process request using built-in method handlers."""
         method = request.get("method")
         params = request.get("params", {})
         
@@ -691,6 +768,86 @@ class DCCSimulator:
             return handler(params)
         else:
             return {"status": "error", "message": "Unknown method"}
+
+    def _process_scenario_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Process request using scenario sequence when available."""
+        if not self.scenario_sequence:
+            return None
+
+        if self.scenario_index >= len(self.scenario_sequence):
+            self._log("Scenario sequence reached end; rewinding to first step")
+            self.scenario_index = 0
+
+        step = self.scenario_sequence[self.scenario_index]
+        expected_request = step.get("request")
+
+        if isinstance(expected_request, dict) and expected_request != request:
+            self._log(
+                "WARNING: Scenario request mismatch at step "
+                f"{self.scenario_index + 1}/{len(self.scenario_sequence)}; "
+                "falling back to built-in handlers"
+            )
+            return None
+
+        if self.config.get("simulate_timing", True):
+            delay_ms = step.get("request_to_response_ms")
+            if isinstance(delay_ms, (int, float)) and delay_ms > 0:
+                time.sleep(min(delay_ms, 60000) / 1000.0)
+
+        response = step.get("response")
+        self.scenario_index += 1
+
+        if isinstance(response, dict):
+            return response
+
+        return {"status": "error", "message": "Invalid scenario response"}
+
+    def _process_replay_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Process request using replay pairs when available."""
+        if not self.replay_pairs:
+            return None
+
+        if self.replay_index >= len(self.replay_pairs):
+            self._log("Replay sequence reached end; rewinding to first step")
+            self.replay_index = 0
+
+        pair = self.replay_pairs[self.replay_index]
+        expected_request = pair.get("request")
+
+        if isinstance(expected_request, dict) and expected_request != request:
+            self._log(
+                "WARNING: Replay request mismatch at step "
+                f"{self.replay_index + 1}/{len(self.replay_pairs)}; "
+                "falling back to built-in handlers"
+            )
+            return None
+
+        if self.config.get("simulate_timing", True):
+            delay_ms = pair.get("request_to_response_ms")
+            if isinstance(delay_ms, (int, float)) and delay_ms > 0:
+                time.sleep(min(delay_ms, 60000) / 1000.0)
+
+        response = pair.get("response")
+        self.replay_index += 1
+
+        if isinstance(response, dict):
+            return response
+
+        return {"status": "error", "message": "Invalid replay response"}
+
+    def process_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """Process an RPC request and generate response."""
+        if self.config.get("response_mode") == "replay":
+            replay_response = self._process_replay_request(request)
+            if replay_response is not None:
+                return replay_response
+
+        if self.config.get("response_mode") == "scenario":
+            scenario_response = self._process_scenario_request(request)
+            if scenario_response is not None:
+                return scenario_response
+
+        return self._process_default_request(request)
     
     def run(self):
         """Main simulator loop."""
