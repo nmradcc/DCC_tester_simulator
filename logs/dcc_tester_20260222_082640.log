@@ -1,0 +1,109 @@
+
+
+======================================================================
+DCC TESTER - MAIN MENU
+======================================================================
+
+Available Tests:
+
+  1. Packet Acceptance Test
+  2. Timing Margin Test
+  3. Inter-Packet Acceptance Test
+  4. Bad Bit Test
+  5. Function I/O Test
+  6. Accessory I/O Test
+  7. Acceptance Test with Override
+  8. Set Command Station Parameters
+
+  C. View/Edit System Configuration
+  L. Toggle File Logging (currently ON, screen always on)
+  Q. Quit
+
+======================================================================
+
+Select test to run (1-8, C, L, Q): 
+Launching RunPacketAcceptanceTest.py...
+
+======================================================================
+DCC Packet Acceptance Test Runner
+NEM 671 Compliance Testing
+======================================================================
+
+This script will run multiple iterations of the Packet Acceptance
+test to verify NEM 671 compliance.
+
+If any iteration fails, the test will continue unless stop on failure is enabled.
+
+
+======================================================================
+Configuration Summary:
+======================================================================
+System Parameters:
+  Serial port:        COM19
+  In circuit motor:   False
+  Logging level:      1
+
+Test Parameters:
+  Locomotive address: 3
+  Inter-packet delay: 1000 ms
+  Test stop delay:    1000 ms
+  Number of passes:   3
+  Stop on failure:    False
+======================================================================
+
+Step 1: Starting command station in custom packet mode
+ERROR: Failed to start command station: None
+
+✗ Pass 1/3 FAILED
+Error: Failed to start command station
+Step 1: Starting command station in custom packet mode
+Step 2: Reading motor off IO status as baseline...
+ERROR: Missing GPIO value in response: {'status': 'ok', 'message': 'Command station started', 'loop': 0}
+
+✗ Pass 2/3 FAILED
+Error: Failed to read IO13/IO14
+Step 1: Starting command station in custom packet mode
+
+ERROR: Serial port error: Attempting to use a port that is not open
+
+✗ Pass 3/3 FAILED
+Error: Serial port error: Attempting to use a port that is not open
+
+======================================================================
+ALL TESTS COMPLETED SUCCESSFULLY
+======================================================================
+
+Results Summary:
+  Total passes: 3
+  Passed: 0
+  Failed: 3
+  Success rate: 100%
+
+✓ All 3 test passes completed with 1000ms inter-packet delay
+
+
+Press Enter to return to menu...
+======================================================================
+DCC TESTER - MAIN MENU
+======================================================================
+
+Available Tests:
+
+  1. Packet Acceptance Test
+  2. Timing Margin Test
+  3. Inter-Packet Acceptance Test
+  4. Bad Bit Test
+  5. Function I/O Test
+  6. Accessory I/O Test
+  7. Acceptance Test with Override
+  8. Set Command Station Parameters
+
+  C. View/Edit System Configuration
+  L. Toggle File Logging (currently ON, screen always on)
+  Q. Quit
+
+======================================================================
+
+Select test to run (1-8, C, L, Q): 
+Exiting DCC Tester System.
+

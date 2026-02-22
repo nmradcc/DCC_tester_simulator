@@ -4,7 +4,7 @@
 # Serial port to listen on (requires virtual COM port pair)
 # On Windows: Use com0com to create a virtual port pair (e.g., COM9 <-> COM10)
 # Scripts connect to COM9, simulator listens on COM10
-serial_port=COM10
+serial_port=COM20
 
 # Serial communication settings
 baudrate=115200
