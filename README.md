@@ -39,6 +39,7 @@ The simulator fully implements all DCC_tester RPC methods:
 
 **Packet Control:**
 - `command_station_load_packet` - Load custom packet queue
+- `command_station_transmit_packet` - Transmit currently loaded packet
 
 **System:**
 - `system_reboot` - Reboot system (closes connection)

@@ -1,6 +1,8 @@
 # Simulator log directory (auto-generated)
 simulator_logs/
 
+logs/
+
 # Parsed log outputs
 *_pairs.json
 *_scenario.json

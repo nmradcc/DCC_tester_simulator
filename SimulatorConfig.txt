@@ -4,7 +4,7 @@
 # Serial port to listen on (requires virtual COM port pair)
 # On Windows: Use com0com to create a virtual port pair (e.g., COM9 <-> COM10)
 # Scripts connect to COM9, simulator listens on COM10
-serial_port=COM10
+serial_port=COM20
 
 # Serial communication settings
 baudrate=115200
@@ -14,14 +14,14 @@ timeout=2
 #   "default" - Use built-in response library
 #   "replay" - Learn from verbose log file
 #   "scenario" - Load specific test scenario
-response_mode=default
+response_mode=scenario
 
 # Path to verbose log file (for replay mode)
 # Set to None or leave empty for default mode
 log_file=None
 
 # Path to scenario JSON file (for scenario mode)
-scenario_file=None
+scenario_file=test1_output_scenario.json
 
 # Enable logging of all RPC traffic
 enable_logging=true
@@ -31,7 +31,7 @@ log_directory=simulator_logs
 
 # Simulate realistic timing delays
 # Set to false for instant responses (useful for debugging)
-simulate_timing=true
+simulate_timing=false
 
 # Verbose console output
 verbose=true

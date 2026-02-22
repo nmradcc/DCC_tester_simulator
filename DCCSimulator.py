@@ -27,6 +27,7 @@ import json
 import serial
 import time
 import random
+import tempfile
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -77,6 +78,10 @@ class CommandStationState:
         
         # Custom packet queue
         self.packet_queue = []
+
+        # GPIO input state as 16-bit word (Bit 0 = IO1 ... Bit 15 = IO16)
+        # Default chosen to match known packet acceptance traces.
+        self.gpio_inputs_word = 0x7FBF
     
     def to_dict(self) -> Dict[str, Any]:
         """Return state as dictionary for logging."""
@@ -88,6 +93,7 @@ class CommandStationState:
             "override_params": self.override_params.copy(),
             "voltage_mv": self.voltage_mv,
             "current_ma": self.current_ma,
+            "gpio_inputs_word": self.gpio_inputs_word,
         }
 
 
@@ -99,6 +105,11 @@ class DCCSimulator:
         self.state = CommandStationState()
         self.response_library = {}
         self.log_file = None
+        self.instance_lock_fd = None
+        self.instance_lock_path = None
+
+        # Ensure only one simulator instance uses this serial endpoint
+        self._acquire_instance_lock()
         
         # Load response library
         self._load_response_library()
@@ -116,9 +127,78 @@ class DCCSimulator:
             )
             self._log(f"Opened serial port {config['serial_port']}")
         except serial.SerialException as e:
+            self._release_instance_lock()
             print(f"ERROR: Failed to open serial port {config['serial_port']}: {e}")
             print("Make sure you have a virtual COM port pair set up (e.g., using com0com)")
             sys.exit(1)
+
+    def _is_pid_running(self, pid: int) -> bool:
+        """Return True if a process with this PID appears to be running."""
+        if pid <= 0:
+            return False
+        try:
+            os.kill(pid, 0)
+            return True
+        except PermissionError:
+            return True
+        except OSError:
+            return False
+
+    def _acquire_instance_lock(self):
+        """Acquire per-port simulator lock to prevent duplicate instances."""
+        port_name = str(self.config["serial_port"]).strip().lower()
+        safe_port = "".join(ch if ch.isalnum() else "_" for ch in port_name)
+        lock_name = f"dccsim_{safe_port}.lock"
+        self.instance_lock_path = os.path.join(tempfile.gettempdir(), lock_name)
+
+        while True:
+            try:
+                fd = os.open(
+                    self.instance_lock_path,
+                    os.O_CREAT | os.O_EXCL | os.O_WRONLY
+                )
+                os.write(fd, str(os.getpid()).encode("utf-8"))
+                self.instance_lock_fd = fd
+                break
+            except FileExistsError:
+                try:
+                    with open(self.instance_lock_path, "r", encoding="utf-8") as f:
+                        existing_pid = int(f.read().strip() or "0")
+                except (OSError, ValueError):
+                    existing_pid = 0
+
+                if existing_pid and self._is_pid_running(existing_pid):
+                    print(
+                        "ERROR: Another DCCSimulator instance is already running "
+                        f"for {self.config['serial_port']} (PID {existing_pid})."
+                    )
+                    print("Stop the existing simulator before starting another instance.")
+                    sys.exit(1)
+
+                try:
+                    os.remove(self.instance_lock_path)
+                except OSError:
+                    print(
+                        "ERROR: Another DCCSimulator instance is likely already running "
+                        f"for {self.config['serial_port']}."
+                    )
+                    print(f"Lock file in use: {self.instance_lock_path}")
+                    sys.exit(1)
+
+    def _release_instance_lock(self):
+        """Release per-port simulator lock."""
+        if self.instance_lock_fd is not None:
+            try:
+                os.close(self.instance_lock_fd)
+            except OSError:
+                pass
+            self.instance_lock_fd = None
+
+        if self.instance_lock_path and os.path.exists(self.instance_lock_path):
+            try:
+                os.remove(self.instance_lock_path)
+            except OSError:
+                pass
     
     def _load_response_library(self):
         """Load default response library from JSON file."""
@@ -167,6 +247,7 @@ class DCCSimulator:
             "echo": 0.001,
             "command_station_start": 0.005,
             "command_station_stop": 0.005,
+            "command_station_transmit_packet": 0.001,
             "get_voltage_feedback_mv": 0.010,
             "get_current_feedback_ma": 0.010,
             "command_station_params": 0.002,
@@ -201,6 +282,8 @@ class DCCSimulator:
         self.state.running = True
         self.state.loop_mode = loop
         self.state.current_ma = 500  # Simulate some current draw
+        # Reset expected GPIO baseline at start of each test cycle.
+        self.state.gpio_inputs_word = 0x7FBF
         
         self._log(f"Command station started (loop={loop})")
         
@@ -457,13 +540,30 @@ class DCCSimulator:
                 "current_ma": current
             }
     
+    def _handle_get_gpio_inputs(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle get_gpio_inputs RPC method."""
+        gpio_word = self.state.gpio_inputs_word & 0xFFFF
+        
+        return {
+            "status": "ok",
+            "value": gpio_word,
+            "hex": f"0x{gpio_word:04X}"
+        }
+
     def _handle_system_reboot(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle system_reboot RPC method."""
-        self._log("System reboot requested (will close connection)")
+        self._log("System reboot requested")
         return {
             "status": "ok",
             "message": "System rebooting..."
         }
+
+    def _simulate_system_reboot(self):
+        """Simulate reboot while keeping the serial port available."""
+        self._log("Simulating reboot... command station unavailable for 1 second")
+        time.sleep(1)
+        self.state = CommandStationState()
+        self._log("Reboot complete. State reset to defaults.")
     
     def _handle_command_station_load_packet(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle command_station_load_packet RPC method."""
@@ -503,6 +603,50 @@ class DCCSimulator:
             "length": len(bytes_list),
             "replace": replace
         }
+
+    def _handle_command_station_transmit_packet(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle command_station_transmit_packet RPC method."""
+        if not self.state.running:
+            return {
+                "status": "error",
+                "message": "Command station is not running"
+            }
+
+        delay_ms = params.get("delay_ms", 0)
+        if not isinstance(delay_ms, int) or delay_ms < 0 or delay_ms > 60000:
+            return {
+                "status": "error",
+                "message": "delay_ms must be an integer between 0 and 60000"
+            }
+
+        if not self.state.packet_queue:
+            return {
+                "status": "error",
+                "message": "No packet loaded"
+            }
+
+        if self.config["simulate_timing"] and delay_ms > 0:
+            time.sleep(delay_ms / 1000.0)
+
+        packet = self.state.packet_queue[0]
+
+        # Simulate expected IO13 behavior for known packet-acceptance traffic.
+        # Bit 12 corresponds to IO13 (1 = high, 0 = low).
+        if len(packet) >= 3:
+            packet_state_byte = packet[2]
+            if packet_state_byte == 0x40:
+                self.state.gpio_inputs_word &= ~(1 << 12)
+            elif packet_state_byte == 0x81:
+                self.state.gpio_inputs_word |= (1 << 12)
+
+        self._log(f"Packet transmitted: {packet} (delay_ms={delay_ms})")
+
+        return {
+            "status": "ok",
+            "message": "Packet transmission triggered",
+            "delay_ms": delay_ms,
+            "length": len(packet)
+        }
     
     def process_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Process an RPC request and generate response."""
@@ -536,8 +680,10 @@ class DCCSimulator:
             "parameters_factory_reset": self._handle_parameters_factory_reset,
             "get_voltage_feedback_mv": self._handle_get_voltage_feedback_mv,
             "get_current_feedback_ma": self._handle_get_current_feedback_ma,
+            "get_gpio_inputs": self._handle_get_gpio_inputs,
             "system_reboot": self._handle_system_reboot,
             "command_station_load_packet": self._handle_command_station_load_packet,
+            "command_station_transmit_packet": self._handle_command_station_transmit_packet,
         }
         
         handler = handlers.get(method)
@@ -552,6 +698,10 @@ class DCCSimulator:
         self._log("DCC Command Station RPC Simulator Started")
         self._log("=" * 70)
         self._log(f"Serial port: {self.config['serial_port']}")
+        self._log(
+            f"Port pairing check: simulator={self.config['serial_port']} | "
+            "tester=<paired virtual COM port endpoint>"
+        )
         self._log(f"Baudrate: {self.config['baudrate']}")
         self._log(f"Response mode: {self.config['response_mode']}")
         self._log("Waiting for RPC requests... (Press Ctrl+C to stop)")
@@ -565,6 +715,9 @@ class DCCSimulator:
                 except UnicodeDecodeError:
                     self._log("ERROR: Received invalid UTF-8 data")
                     continue
+                except serial.SerialException as e:
+                    self._log(f"ERROR: Serial read failed: {e}")
+                    break
                 
                 if not line:
                     continue
@@ -578,7 +731,11 @@ class DCCSimulator:
                     response = {"status": "error", "message": "Invalid JSON"}
                     response_json = json.dumps(response)
                     self._log(f"→ {response_json}")
-                    self.ser.write((response_json + "\r\n").encode("utf-8"))
+                    try:
+                        self.ser.write((response_json + "\r\n").encode("utf-8"))
+                    except serial.SerialException as e:
+                        self._log(f"ERROR: Serial write failed: {e}")
+                        break
                     continue
                 
                 # Process request
@@ -587,15 +744,15 @@ class DCCSimulator:
                 # Send response
                 response_json = json.dumps(response)
                 self._log(f"→ {response_json}")
-                self.ser.write((response_json + "\r\n").encode("utf-8"))
+                try:
+                    self.ser.write((response_json + "\r\n").encode("utf-8"))
+                except serial.SerialException as e:
+                    self._log(f"ERROR: Serial write failed: {e}")
+                    break
                 
                 # Special handling for reboot
                 if request.get("method") == "system_reboot":
-                    self._log("Simulating reboot... closing connection in 1 second")
-                    time.sleep(1)
-                    self.ser.close()
-                    self._log("Connection closed. Exiting simulator.")
-                    break
+                    self._simulate_system_reboot()
         
         except KeyboardInterrupt:
             self._log("")
@@ -606,6 +763,8 @@ class DCCSimulator:
                 self.ser.close()
             if self.log_file:
                 self.log_file.close()
+                self.log_file = None
+            self._release_instance_lock()
             self._log("Shutdown complete")
 
 
@@ -663,3 +822,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
