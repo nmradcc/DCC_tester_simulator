@@ -1,0 +1,186 @@
+{
+  "command_station_start": {
+    "count": 77,
+    "unique_param_sets": 1,
+    "unique_responses": 1,
+    "example_params": [
+      {
+        "loop": 0
+      }
+    ],
+    "example_responses": [
+      {
+        "loop": 0,
+        "message": "Command station started",
+        "status": "ok"
+      }
+    ]
+  },
+  "get_gpio_inputs": {
+    "count": 229,
+    "unique_param_sets": 1,
+    "unique_responses": 3,
+    "example_params": [
+      {}
+    ],
+    "example_responses": [
+      {
+        "hex": "0x7FBF",
+        "status": "ok",
+        "value": 32703
+      },
+      {
+        "hex": "0x6FBF",
+        "status": "ok",
+        "value": 28607
+      },
+      {
+        "hex": "0x7FB8",
+        "status": "ok",
+        "value": 32696
+      }
+    ]
+  },
+  "command_station_load_packet": {
+    "count": 155,
+    "unique_param_sets": 38,
+    "unique_responses": 3,
+    "example_params": [
+      {
+        "bytes": [
+          3,
+          63,
+          64,
+          124
+        ],
+        "replace": true
+      },
+      {
+        "bytes": [
+          3,
+          63,
+          129,
+          189
+        ],
+        "replace": true
+      },
+      {
+        "bytes": [
+          3,
+          129,
+          130
+        ],
+        "replace": true
+      }
+    ],
+    "example_responses": [
+      {
+        "length": 4,
+        "message": "Packet loaded successfully",
+        "replace": true,
+        "status": "ok"
+      },
+      {
+        "length": 3,
+        "message": "Packet loaded successfully",
+        "replace": true,
+        "status": "ok"
+      },
+      {
+        "length": 3,
+        "message": "Packet loaded successfully",
+        "replace": false,
+        "status": "ok"
+      }
+    ]
+  },
+  "command_station_transmit_packet": {
+    "count": 153,
+    "unique_param_sets": 2,
+    "unique_responses": 2,
+    "example_params": [
+      {
+        "delay_ms": 0
+      },
+      {
+        "delay_ms": 200
+      }
+    ],
+    "example_responses": [
+      {
+        "delay_ms": 0,
+        "message": "Packet transmission triggered",
+        "status": "ok"
+      },
+      {
+        "delay_ms": 200,
+        "message": "Packet transmission triggered",
+        "status": "ok"
+      }
+    ]
+  },
+  "command_station_stop": {
+    "count": 77,
+    "unique_param_sets": 1,
+    "unique_responses": 1,
+    "example_params": [
+      {}
+    ],
+    "example_responses": [
+      {
+        "message": "Command station stopped",
+        "status": "ok"
+      }
+    ]
+  },
+  "command_station_params": {
+    "count": 10,
+    "unique_param_sets": 7,
+    "unique_responses": 1,
+    "example_params": [
+      {
+        "preamble_bits": 17,
+        "bit1_duration": 58,
+        "bit0_duration": 100,
+        "trigger_first_bit": true
+      },
+      {
+        "bit1_duration": 52
+      },
+      {
+        "bit1_duration": 58
+      }
+    ],
+    "example_responses": [
+      {
+        "message": "Command station parameters updated",
+        "status": "ok"
+      }
+    ]
+  },
+  "command_station_get_params": {
+    "count": 1,
+    "unique_param_sets": 1,
+    "unique_responses": 1,
+    "example_params": [
+      {}
+    ],
+    "example_responses": [
+      {
+        "parameters": {
+          "bidi_dac": 466,
+          "bidi_enable": false,
+          "bit0_duration": 100,
+          "bit1_duration": 58,
+          "preamble_bits": 17,
+          "track_voltage": 15000,
+          "trigger_first_bit": true,
+          "zerobit_deltaN": 0,
+          "zerobit_deltaP": 0,
+          "zerobit_override_mask": "0x000000000000000l"
+        },
+        "status": "ok"
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+# Default configuration for RunBadBitTest.py
+# Use key=value pairs. Lines starting with # or ; are ignored.
+# Global settings (serial_port, in_circuit_motor, logging_level) are in SystemConfig.txt
+
+address=3
+inter_packet_delay_ms=1000
+test_stop_delay=1000
+pass_count=1
+stop_on_failure=false
+# press any key to continue or 'c' to trigger screen capture 
+wait_key_press=false
+# 32-bit flip mask, MSB-first across address/instruction/speed/checksum
+# Special case: if flip_mask=0, all bits are tested starting at 0x80000000
+# and shifting right one bit each test until all bits are tested.
+flip_mask=0x00000000

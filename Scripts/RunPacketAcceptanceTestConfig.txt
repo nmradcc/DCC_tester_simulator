@@ -1,0 +1,9 @@
+# Default configuration for RunPacketAcceptanceTest.py
+# Use key=value pairs. Lines starting with # or ; are ignored.
+# Global settings (serial_port, in_circuit_motor, logging_level) are in SystemConfig.txt
+
+address=3
+inter_packet_delay_ms=1000
+test_stop_delay=1000
+pass_count=3
+stop_on_failure=false

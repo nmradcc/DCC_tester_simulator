@@ -1,13 +1,13 @@
 # Simulator log directory (auto-generated)
 simulator_logs/
 
-logs/
+#logs/
 
 # Parsed log outputs
-*_pairs.json
-*_scenario.json
-*_summary.json
-parsed_*
+#*_pairs.json
+#*_scenario.json
+#*_summary.json
+#parsed_*
 
 # Python cache
 __pycache__/
@@ -76,7 +76,7 @@ cover/
 *.pot
 
 # Django stuff:
-*.log
+#*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal

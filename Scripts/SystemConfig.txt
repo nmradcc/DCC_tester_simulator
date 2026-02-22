@@ -1,0 +1,26 @@
+# DCC Tester System Configuration
+# =================================
+# Global configuration parameters shared across all test runners
+
+# Serial port for DCC Tester device
+serial_port=COM19
+
+# In-circuit motor flag (true/false)
+# Set to true if testing with motor connected
+in_circuit_motor=false
+
+# Logging level (0=none, 1=normal, 2=verbose)
+logging_level=1
+
+# Save logs to file (true/false)
+# Note: Console/screen output is always displayed, this only controls file logging
+save_logs=true
+
+# Log directory path (relative to Scripts folder or absolute path)
+log_directory=C:\GitHub\nmradcc\DCC_tester_simulator\logs
+
+# Monitor index for screen capture (1=primary, 2=secondary, etc.)
+monitor_index=2
+
+# Screenshot directory path (relative to Scripts folder or absolute path)
+screenshot_directory=c:\tmp\screenshots

@@ -1,0 +1,8 @@
+# Configuration for RunInterPacketAcceptanceTest.py
+# Use key=value pairs. Lines starting with # or ; are ignored.
+# System-level parameters (serial_port, logging_level) are in SystemConfig.txt
+
+address=3
+inter_packet_delay_ms=200
+pass_count=1
+stop_on_failure=false

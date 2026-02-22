@@ -1,0 +1,40 @@
+
+
+
+1. RunPacketAcceptanceTest
+
+This test runs with standard packet timing values of:
+Preamble bits = 17
+DCC bit one duration = 58
+DCC bit zero duration = 100
+
+Default user options are:
+address=3
+inter_packet_delay_ms=1000
+pass_count=10
+# logging_level 0=none 1=minimal 2=verbose
+logging_level=1
+stop_on_failure=false
+serial_port=COM6
+in_circuit_motor=false
+
+The test can be run with or without the motor in circuit.
+The Pass/Fail critera is slightly different depending on in_circuit_motor selection.
+
+The test involves starting the locomotive decoder to 1/2 speed reverse,
+waiting a delay then sending an Emergency Stop command. Checks are made
+throughout to verify the decoder received and operated on the commands.
+
+With in_circuit_motor=true current feedback is used. The baseline off current is
+initially measured then again when running and when stopped.
+The pass critera inforces the current increased when started and decreased back to baseline
+off when stopped.
+
+With in_circuit_motor=false voltage feedback is used. The M+ and M- motor
+leads are sensed via optocoupled logic inputs. Again the logic is sampled throughout
+and similar Pass/Fail logic is used.
+
+
+
+
+
