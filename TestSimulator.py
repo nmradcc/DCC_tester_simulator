@@ -6,9 +6,10 @@ Quick Test for DCC Simulator
 Sends a few RPC commands to verify the simulator is working correctly.
 
 Usage:
-    python TestSimulator.py [port]
+    python TestSimulator.py [port] [timeout_seconds]
 
 Default port: COM9 (connects to simulator on COM10)
+Default timeout: 5 seconds
 """
 
 import sys
@@ -39,15 +40,17 @@ def send_rpc(ser, method, params):
 
 def main():
     port = sys.argv[1] if len(sys.argv) > 1 else "COM9"
+    timeout_seconds = float(sys.argv[2]) if len(sys.argv) > 2 else 5.0
     
     print("=" * 70)
     print("DCC Simulator Test")
     print("=" * 70)
     print(f"Connecting to {port}...")
+    print(f"Serial timeout: {timeout_seconds:.1f}s")
     print()
     
     try:
-        ser = serial.Serial(port, 115200, timeout=2)
+        ser = serial.Serial(port, 115200, timeout=timeout_seconds)
         time.sleep(0.5)
         print(f"✓ Connected to {port}")
         print()
