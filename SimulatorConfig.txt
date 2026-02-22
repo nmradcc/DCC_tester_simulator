@@ -17,10 +17,12 @@ timeout=2
 response_mode=scenario
 
 # Path to replay pairs JSON file (for replay mode)
-# Use LogParser output (e.g., Test1-4_pairs.json). Set to None when not using replay mode.
+# Use LogParser output (e.g., Test1-4_pairs.json)
+# Set to None when not using replay mode.
 log_file=None
 
 # Path to scenario JSON file (for scenario mode)
+# Use LogParser output (e.g., Test1-4_scenario.json)
 scenario_file=Test1-4_scenario.json
 
 # Enable logging of all RPC traffic
