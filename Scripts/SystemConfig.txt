@@ -17,7 +17,7 @@ logging_level=1
 save_logs=true
 
 # Log directory path (relative to Scripts folder or absolute path)
-log_directory=C:\GitHub\nmradcc\DCC_tester_simulator\logs
+log_directory=..\logs
 
 # Monitor index for screen capture (1=primary, 2=secondary, etc.)
 monitor_index=2

@@ -33,7 +33,7 @@ log_directory=simulator_logs
 
 # Simulate realistic timing delays
 # Set to false for instant responses (useful for debugging)
-simulate_timing=true
+simulate_timing=false
 
 # Verbose console output
 verbose=true
