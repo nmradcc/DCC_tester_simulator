@@ -8,7 +8,7 @@ serial_port=COM20
 
 # Serial communication settings
 baudrate=115200
-timeout=2
+timeout=5
 
 # Response mode:
 #   "default" - Use built-in response library
